@@ -1,20 +1,31 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useState, createContext, useContext } from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
+import OrdersScreen from './src/screens/order.screen';
+import AuthScreen from './src/screens/auth.screen';
 
-export default function App() {
+// Create a context to manage authentication state
+const AuthContext = createContext();
+
+const Stack = createStackNavigator();
+
+const App = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
   return (
-    <View style={styles.container}>
-      <Text>Open up App.js to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
+    <AuthContext.Provider value={{ isAuthenticated, setIsAuthenticated }}>
+      <NavigationContainer>
+        <Stack.Navigator>
+          {isAuthenticated ? (
+            <Stack.Screen name="Orders" component={OrdersScreen} />
+          ) : (
+            <Stack.Screen name="Login" component={AuthScreen} />
+          )}
+        </Stack.Navigator>
+      </NavigationContainer>
+    </AuthContext.Provider>
   );
-}
+};
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+export default App;
+export const useAuth = () => useContext(AuthContext);
