@@ -14,7 +14,7 @@ const AuthScreen = ({ navigation }) => {
             console.log(response.data)
             if (response.data.token) {
                 setIsAuthenticated(true);
-                navigation.navigate('Orders');
+                navigation.navigate('Main');
             } else {
                 Alert.alert('Error', 'Invalid credentials');
             }
