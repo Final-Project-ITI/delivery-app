@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import SwitchWithIcon from '../components/SwitchWithIcon';
+import axios from 'axios';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as SecureStore from 'expo-secure-store';
+import { FlatList } from 'react-native-gesture-handler';
 
 
 const OrdersScreen = ({ navigation }) => {
@@ -12,95 +15,94 @@ const OrdersScreen = ({ navigation }) => {
         setIsAvailable(previousState => !previousState);
     };
 
+    const [orders, setOrders] = useState();
+
+    const handleGetAllOrders = async () => {
+        try {
+            const token = await SecureStore.getItemAsync('token');
+
+            const response = await axios.get('http://10.0.2.2:3000/api/v1/delivery/deliveryman', {
+                headers: {
+                    'jwt': token
+                }
+            });
+
+            setOrders(response.data);
+        } catch (e) {
+            console.log(e);
+        }
+    }
+
+    const handleDate = (date) => {
+        date = new Date(date);
+        const options = { month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true };
+        const formattedDate = new Intl.DateTimeFormat('en-US', options).format(date);
+
+        // Customize the format to "May - 5 / 10:00 pm"
+        const [month, day, time, period] = formattedDate.replace(',', '').split(' ');
+        return `${month} - ${day} / ${time} ${period}`;
+    }
+
+    useEffect(() => {
+        handleGetAllOrders();
+    }, []);
+
     return (
         <SafeAreaView style={styles.container}>
-            {/* <View style={styles.header}>
-                <Text style={styles.headerText}>{isAvailable ? 'All Orders' : "I'm Not Available"}</Text>
-                <View style={styles.toggleContainer}>
-                    <Switch
-                        onValueChange={toggleAvailability}
-                        value={isAvailable}
-                    />
-                    <TouchableOpacity onPress={() => navigation.navigate('Notification')}>
-                        <Text style={styles.notificationIcon}>🔔</Text>
-                    </TouchableOpacity>
-                </View>
-            </View> */}
-
             <SwitchWithIcon navigation={navigation} />
             <ScrollView style={styles.orderList}>
-                <View style={styles.orderItem}>
-                    <View style={{
-                        flexDirection: "row",
-                        justifyContent: "space-between"
-                    }}>
-                        <View alignItems={"flex-start"}>
-                            <Text style={styles.itemHeaderText}>Alsaraya</Text>
-                            <Text>Order ID: 23</Text>
+                <FlatList
+                    data={orders}
+                    renderItem={({ item }) => <View style={styles.orderItem}>
+                        <View style={{
+                            flexDirection: "row",
+                            justifyContent: "space-between"
+                        }}>
+                            <View alignItems={"flex-start"}>
+                                <Text style={styles.itemHeaderText}>{item.restaurant.name}</Text>
+                                <Text>{handleDate(item.assignedAt)}</Text>
+                            </View>
+                            <View alignItems={"center"} marginRight={30}>
+                                <Text style={styles.itemHeaderText}>{item.orderId.statusId.status}</Text>
+                            </View>
                         </View>
-                        <View alignItems={"center"}>
-                            <Text style={styles.itemHeaderText}>New</Text>
-                            <Text>You Have New Order</Text>
-                        </View>
-                    </View>
-                    <View style={{
-                        flexDirection: "row",
-                        justifyContent: "space-between",
-                        marginTop: 16,
-                    }}>
-                        <View alignItems={"flex-start"}>
-                            <Text style={styles.itemHeaderText}>Client Address</Text>
-                            <Text>10 Hamada Street, Alvillar</Text>
-                        </View>
-                        <View alignItems={"center"}>
-                            {/* <Button title="Details" onPress={() => navigation.navigate('OrderDetails')} /> */}
+                        <View style={{
+                            flexDirection: "row",
+                            justifyContent: "space-between",
+                            marginTop: 16,
+                        }}>
+                            <View alignItems={"flex-start"}>
+                                <Text style={styles.itemHeaderText}>Client Address</Text>
+                                <Text style={{
+                                    width: 200
+                                }}>{item.orderId.addressId.details}</Text>
+                            </View>
+                            <View alignItems={"center"}>
+                                {/* <Button title="Details" onPress={() => navigation.navigate('OrderDetails')} /> */}
 
-                            <Pressable onPress={() => {
-                                console.log("Details button pressed")
-                            }}>
-                                <View style={{
-                                    borderColor: "#D74339",
-                                    borderWidth: 1,
-                                    borderRadius: 5,
-                                    paddingHorizontal: 10,
-                                    paddingVertical: 5,
-                                    backgroundColor: "#F3ECE4"
-                                }} marginRight={30}>
-                                    <Text style={{
-                                        color: "#D74339"
-                                    }}>Details</Text>
-                                </View>
-                            </Pressable>
+                                <Pressable onPress={() => navigation.navigate('OrderDetails', {
+                                    item
+                                })}>
+                                    <View style={{
+                                        borderColor: "#D74339",
+                                        borderWidth: 1,
+                                        borderRadius: 5,
+                                        paddingHorizontal: 10,
+                                        paddingVertical: 5,
+                                        backgroundColor: "#F3ECE4"
+                                    }} marginRight={30}>
+                                        <Text style={{
+                                            color: "#D74339"
+                                        }}>Details</Text>
+                                    </View>
+                                </Pressable>
+                            </View>
                         </View>
-                    </View>
-                </View>
+                    </View>}
+                    keyExtractor={item => item.id}
+                />
+
             </ScrollView>
-            <Modal
-                animationType="slide"
-                transparent={true}
-                visible={modalVisible}
-                onRequestClose={() => {
-                    setModalVisible(!modalVisible);
-                }}
-            >
-                <View style={styles.modalView}>
-                    <Text style={styles.modalText}>New Order</Text>
-                    <View style={styles.notificationItem}>
-                        <Text>Alsaraya</Text>
-                        <View style={styles.buttonGroup}>
-                            <Button title="Accept" onPress={() => setModalVisible(false)} />
-                            <Button title="Decline" onPress={() => setModalVisible(false)} />
-                        </View>
-                    </View>
-                    <View style={styles.notificationItem}>
-                        <Text>Alsaraya</Text>
-                        <View style={styles.buttonGroup}>
-                            <Button title="Accept" onPress={() => setModalVisible(false)} />
-                            <Button title="Decline" onPress={() => setModalVisible(false)} />
-                        </View>
-                    </View>
-                </View>
-            </Modal>
         </SafeAreaView >
     );
 };
@@ -142,7 +144,8 @@ const styles = StyleSheet.create({
     itemHeaderText: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: "#D74339"
+        color: "#D74339",
+        textTransform: "capitalize"
     },
     modalView: {
         margin: 20,

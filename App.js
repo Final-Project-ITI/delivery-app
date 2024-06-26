@@ -27,7 +27,7 @@ export default function App() {
   return (
     <AuthContext.Provider value={{ isAuthenticated, setIsAuthenticated }}>
       <NavigationContainer>
-        <Stack.Navigator initialRouteName="Main">
+        <Stack.Navigator initialRouteName="Login">
           <Stack.Screen name="Login" component={AuthScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Main" component={TabNavigator} options={{ headerShown: false }} />
           <Stack.Screen name="Notification" component={NotificationScreen} options={{ headerShown: false }} />

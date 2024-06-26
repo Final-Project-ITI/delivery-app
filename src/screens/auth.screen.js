@@ -2,7 +2,9 @@ import React from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import axios from 'axios';
-import { useAuth } from '../../App'; // Adjust the import based on your file structure
+import { useAuth } from '../../App';
+import * as SecureStore from 'expo-secure-store';
+
 
 const AuthScreen = ({ navigation }) => {
     const { control, handleSubmit, formState: { errors } } = useForm();
@@ -11,13 +13,16 @@ const AuthScreen = ({ navigation }) => {
     const onSubmit = async data => {
         try {
             const response = await axios.post('http://10.0.2.2:3000/api/v1/authentication/login', data);
-            console.log(response.data)
             if (response.data.token) {
+                await SecureStore.setItemAsync('token', response.data.token);
                 setIsAuthenticated(true);
                 navigation.navigate('Main');
             } else {
                 Alert.alert('Error', 'Invalid credentials');
             }
+
+            const token = await SecureStore.getItemAsync('token');
+            console.log(token);
         } catch (error) {
             console.log('Error', error);
         }

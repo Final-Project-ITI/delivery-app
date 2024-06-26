@@ -1,12 +1,34 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { RadioButton } from 'react-native-paper';
 import SwitchWithIcon from '../components/SwitchWithIcon';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { FlatList } from 'react-native-gesture-handler';
 
-const OrderDetailsScreen = ({ navigation }) => {
+const OrderDetailsScreen = ({ route, navigation }) => {
     const [status, setStatus] = useState('Picked Up');
+    const { item } = route.params;
 
+
+    const handleCalcTotal = () => {
+        let total = 0;
+
+        for (var i = 0; i < item.items.length; i++) {
+            total += item.items[i].productId.price * item.items[i].quantity;
+        }
+
+        return total;
+    }
+
+    const handleCalcQny = () => {
+        let qnt = 0;
+
+        for (var i = 0; i < item.items.length; i++) {
+            qnt += item.items[i].quantity;
+        }
+
+        return qnt;
+    }
     return (
         <>
             <SafeAreaView style={{
@@ -17,37 +39,58 @@ const OrderDetailsScreen = ({ navigation }) => {
             <ScrollView style={styles.container}>
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Restaurant Details</Text>
-                    <Text style={styles.sectionText}>Alsaraya Restaurant</Text>
-                    <Text style={styles.sectionText}>Order Id: 24</Text>
-                    <Text style={styles.sectionText}>Address: 10 Hamada Street, Alvilall.....</Text>
-                    <Text style={styles.sectionText}>Phone: 01124095405</Text>
+                    <Text style={styles.sectionText}>{item.restaurant.name}</Text>
+                    <Text style={styles.sectionText}><Text style={{
+                        fontWeight: "700"
+                    }}>
+                        Address:
+                    </Text> {item.restaurant.address}</Text>
+                    <Text style={styles.sectionText}><Text style={{
+                        fontWeight: "700"
+                    }}>
+                        Phone:
+                    </Text> {item.restaurant.phone}</Text>
                 </View>
 
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Client Details</Text>
-                    <Text style={styles.sectionText}>Hamada</Text>
-                    <Text style={styles.sectionText}>Address: 10 Hamada Street, Alvilall.....</Text>
-                    <Text style={styles.sectionText}>Phone: 01124095405</Text>
+                    <Text style={styles.sectionText}>{item.orderId.userId.fullName}</Text>
+                    <Text style={styles.sectionText}><Text style={{
+                        fontWeight: "700"
+                    }}>
+                        Address:
+                    </Text> {item.orderId.addressId.details}</Text>
+                    <Text style={styles.sectionText}><Text style={{
+                        fontWeight: "700"
+                    }}>
+                        Phone:
+                    </Text> {item.orderId.phoneId.phoneNumber}</Text>
                 </View>
+
+
 
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Order Items</Text>
-                    <View style={styles.orderItem}>
-                        <Text style={styles.orderItemText}>Chicken BBQ Pizza</Text>
-                        <Text style={styles.orderItemText}>Qty: 1</Text>
-                        <Text style={styles.orderItemText}>EGP 120</Text>
-                    </View>
-                    <View style={styles.orderItem}>
-                        <Text style={styles.orderItemText}>Chicken BBQ Pizza</Text>
-                        <Text style={styles.orderItemText}>Qty: 1</Text>
-                        <Text style={styles.orderItemText}>EGP 120</Text>
-                    </View>
+                    <FlatList
+                        data={item.items}
+                        renderItem={(q) =>
+                            <View style={styles.orderItem}>
+                                <Text style={styles.orderItemText}>{q.item.productId.title}</Text>
+                                <Text style={styles.orderItemText}>Qty: {q.item.quantity}</Text>
+                                <Text style={styles.orderItemText}>EGP {q.item.productId.price * q.item.quantity}</Text>
+                            </View>}
+                        keyExtractor={item => item.id}
+                    />
                     <View style={styles.total}>
                         <Text style={styles.totalText}>Total</Text>
-                        <Text style={styles.totalText}>Qty: 2</Text>
-                        <Text style={styles.totalText}>EGP 440</Text>
+                        <Text style={styles.totalText}>Qty: {handleCalcQny()}</Text>
+                        <Text style={styles.totalText}>EGP {handleCalcTotal()}</Text>
                     </View>
-                    <Text style={styles.paymentStatus}>Payment Status: Paid</Text>
+                    <Text style={styles.paymentStatus}>Payment Status: <Text style={{
+                        textTransform: "capitalize"
+                    }}>
+                        {item.orderId.paymentStatusId.status}
+                    </Text></Text>
                 </View>
 
                 <View style={styles.section}>
@@ -119,6 +162,7 @@ const styles = StyleSheet.create({
     sectionText: {
         fontSize: 14,
         marginBottom: 5,
+        maxWidth: 250
     },
     orderItem: {
         flexDirection: 'row',
