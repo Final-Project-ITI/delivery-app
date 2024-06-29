@@ -4,11 +4,33 @@ import { RadioButton } from 'react-native-paper';
 import SwitchWithIcon from '../components/SwitchWithIcon';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FlatList } from 'react-native-gesture-handler';
+import axios from 'axios';
+import * as SecureStore from 'expo-secure-store';
+import { useAuth } from '../../App';
+import socket from '../socket';
+import Logout from '../components/Logout';
 
 const OrderDetailsScreen = ({ route, navigation }) => {
-    const [status, setStatus] = useState('Picked Up');
+    const { orders, setOrders, user } = useAuth();
+    const [statuses, setStatuses] = useState([]);
+    const [disabled, setDisabled] = useState(false);
     const { item } = route.params;
+    const [status, setStatus] = useState(item.orderId.statusId._id);
 
+    useEffect(() => {
+        if (status === "66467522d96fa5f4ee9cacdc") {
+            setDisabled(true);
+
+            setOrders(pre => pre.map((order) => {
+                if (order.orderId._id === item.orderId._id) {
+                    order.orderId.paymentStatusId.status = "paid";
+                }
+
+                return order;
+            }))
+
+        }
+    }, [status])
 
     const handleCalcTotal = () => {
         let total = 0;
@@ -29,13 +51,71 @@ const OrderDetailsScreen = ({ route, navigation }) => {
 
         return qnt;
     }
+
+    const handleGetOrderStatuses = async () => {
+        try {
+            const url = 'https://back-end-j1bi.onrender.com/api/v1/orderStatuses';
+            const response = await axios.get(url);
+
+            setStatuses(response.data);
+        } catch (e) {
+            console.log(e);
+        }
+    }
+
+    const handleOnChangeOrderStatus = async (statusId) => {
+        const temp = status;
+        setStatus(statusId);
+
+        try {
+            const token = await SecureStore.getItemAsync('token');
+
+            const url = 'https://back-end-j1bi.onrender.com/api/v1/orders/delivery/' + item.orderId._id;
+            const response = await axios.patch(url, {
+                statusId: statusId,
+                userId: item.orderId.userId._id,
+                resId: item.items[0].productId.restaurantId._id
+            }, {
+                headers: {
+                    "jwt": token
+                }
+            });
+
+            socket.emit("change-order-status", item.orderId.userId._id, response.data._id);
+
+            if (statusId === "66467522d96fa5f4ee9cacdc") {
+                socket.emit("change-delivery", null);
+            }
+
+            setOrders(pre => pre.map((order) => {
+                if (order.orderId._id === item.orderId._id) {
+                    order.orderId.statusId = statuses.find(status => status._id === statusId);
+                }
+
+                return order;
+            }))
+        } catch (e) {
+            setStatus(temp)
+            console.log(e);
+        }
+    }
+
+    useEffect(() => {
+        handleGetOrderStatuses();
+
+        socket.on("connect", () => {
+            console.log("Connected to the server");
+        });
+
+        return () => {
+            socket.off("connect");
+        };
+    }, [user])
+
     return (
         <>
-            <SafeAreaView style={{
-                backgroundColor: '#F3ECE4',
-            }}>
-                <SwitchWithIcon navigation={navigation} />
-            </SafeAreaView>
+            <SwitchWithIcon navigation={navigation} />
+
             <ScrollView style={styles.container}>
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Restaurant Details</Text>
@@ -67,8 +147,6 @@ const OrderDetailsScreen = ({ route, navigation }) => {
                     </Text> {item.orderId.phoneId.phoneNumber}</Text>
                 </View>
 
-
-
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Order Items</Text>
                     <FlatList
@@ -95,25 +173,22 @@ const OrderDetailsScreen = ({ route, navigation }) => {
 
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Order Status</Text>
-                    <RadioButton.Group onValueChange={value => setStatus(value)} value={status}>
-                        <View style={styles.radioButton}>
-                            <RadioButton value="Picked Up" />
-                            <Text>Picked Up</Text>
-                        </View>
-                        <View style={styles.radioButton}>
-                            <RadioButton value="On The Way" />
-                            <Text>On The Way</Text>
-                        </View>
-                        <View style={styles.radioButton}>
-                            <RadioButton value="Delivered" />
-                            <Text>Delivered</Text>
-                        </View>
-                        <View style={styles.radioButton}>
-                            <RadioButton value="Paid" />
-                            <Text>Paid</Text>
-                        </View>
+                    <RadioButton.Group onValueChange={value => handleOnChangeOrderStatus(value)} value={status}>
+                        <FlatList
+                            data={statuses}
+                            renderItem={({ item }) =>
+                                <View style={styles.radioButton}>
+                                    <RadioButton value={item._id} disabled={disabled} />
+                                    <Text style={{
+                                        textTransform: "capitalize"
+                                    }}>{item.status}</Text>
+                                </View>}
+                        />
                     </RadioButton.Group>
                 </View>
+                <View style={{
+                    height: 20
+                }}></View>
             </ScrollView>
         </>
     );

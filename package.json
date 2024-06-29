@@ -20,6 +20,7 @@
     "expo": "~51.0.14",
     "expo-secure-store": "^13.0.1",
     "expo-status-bar": "~1.12.1",
+    "jwt-decode": "^4.0.0",
     "react": "18.2.0",
     "react-hook-form": "^7.52.0",
     "react-native": "0.74.2",
@@ -30,7 +31,8 @@
     "react-native-screens": "^3.31.1",
     "react-native-svg": "^15.3.0",
     "react-native-switch": "^1.5.1",
-    "react-native-vector-icons": "^10.1.0"
+    "react-native-vector-icons": "^10.1.0",
+    "socket.io-client": "^4.7.5"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",

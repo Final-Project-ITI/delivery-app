@@ -1,44 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { Button, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import SwitchWithIcon from '../components/SwitchWithIcon';
-import axios from 'axios';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import * as SecureStore from 'expo-secure-store';
 import { FlatList } from 'react-native-gesture-handler';
-
+import { useAuth } from '../../App';
+import Logout from '../components/Logout';
 
 const OrdersScreen = ({ navigation }) => {
-    const [modalVisible, setModalVisible] = useState(false);
-    const [isAvailable, setIsAvailable] = useState(true);
-
-    const toggleAvailability = () => {
-        setIsAvailable(previousState => !previousState);
-    };
-
-    const [orders, setOrders] = useState();
-
-    const handleGetAllOrders = async () => {
-        try {
-            const token = await SecureStore.getItemAsync('token');
-
-            const response = await axios.get('http://10.0.2.2:3000/api/v1/delivery/deliveryman', {
-                headers: {
-                    'jwt': token
-                }
-            });
-
-            setOrders(response.data);
-        } catch (e) {
-            console.log(e);
-        }
-    }
+    const { orders, setOrders, handleGetAllOrders, user } = useAuth();
 
     const handleDate = (date) => {
         date = new Date(date);
         const options = { month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true };
         const formattedDate = new Intl.DateTimeFormat('en-US', options).format(date);
 
-        // Customize the format to "May - 5 / 10:00 pm"
         const [month, day, time, period] = formattedDate.replace(',', '').split(' ');
         return `${month} - ${day} / ${time} ${period}`;
     }
@@ -46,7 +21,6 @@ const OrdersScreen = ({ navigation }) => {
     useEffect(() => {
         handleGetAllOrders();
     }, []);
-
     return (
         <SafeAreaView style={styles.container}>
             <SwitchWithIcon navigation={navigation} />
@@ -103,6 +77,8 @@ const OrdersScreen = ({ navigation }) => {
                 />
 
             </ScrollView>
+
+            <Logout />
         </SafeAreaView >
     );
 };

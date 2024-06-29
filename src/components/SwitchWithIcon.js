@@ -1,19 +1,42 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, Image, TouchableOpacity, AppState } from 'react-native';
 import { Switch } from 'react-native-switch';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { FontAwesome } from '@expo/vector-icons';
+import axios from 'axios';
+import * as SecureStore from 'expo-secure-store';
+import { useAuth } from '../../App';
+import socket from '../socket';
 
 const SwitchWithIcon = (
     { navigation }
 ) => {
-    const [isEnabled, setIsEnabled] = useState(false);
-
-    const [isAvailable, setIsAvailable] = useState(true);
-
+    const { user, isAvailable, setIsAvailable } = useAuth();
     const toggleAvailability = () => {
         setIsAvailable(previousState => !previousState);
     };
+
+    const handleChangeStatus = async () => {
+        try {
+            const token = await SecureStore.getItemAsync('token');
+            const url = 'https://back-end-j1bi.onrender.com/api/v1/deliveryman/' + user._id;
+
+            const response = await axios.patch(url, {
+                status: isAvailable ? "online" : "offline"
+            }, {
+                headers: {
+                    "jwt": token
+                }
+            });
+
+            socket.emit("change-delivery", null);
+        } catch (e) {
+            console.log(e);
+        }
+    }
+
+    useEffect(() => {
+        handleChangeStatus();
+    }, [isAvailable])
 
     return (
         <View style={styles.container} justifyContent={"space-between"}>
@@ -56,7 +79,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: '#EADFCF',
-        borderRadius: 10,
         padding: 20,
     },
     switchContainer: {

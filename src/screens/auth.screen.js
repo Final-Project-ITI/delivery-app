@@ -4,25 +4,55 @@ import { useForm, Controller } from 'react-hook-form';
 import axios from 'axios';
 import { useAuth } from '../../App';
 import * as SecureStore from 'expo-secure-store';
+import { jwtDecode } from "jwt-decode";
+import ws from '../socket';
 
 
 const AuthScreen = ({ navigation }) => {
-    const { control, handleSubmit, formState: { errors } } = useForm();
-    const { setIsAuthenticated } = useAuth();
+    const { control, handleSubmit, formState: { errors }, reset } = useForm();
+    const { setIsAuthenticated, setUser, setIsAvailable } = useAuth();
+
+    const handleGetDeliveryManData = async () => {
+        try {
+            const token = await SecureStore.getItemAsync('token');
+            const url = 'https://back-end-j1bi.onrender.com/api/v1/deliveryman/userId';
+
+            const response = await axios.get(url, {
+                headers: {
+                    'jwt': token
+                }
+            });
+
+            if (response.data.status === "online") {
+                setIsAvailable(true);
+            } else {
+                setIsAvailable(false);
+            }
+
+            setUser(response.data);
+        } catch (e) {
+            console.log(e);
+        }
+    }
 
     const onSubmit = async data => {
         try {
-            const response = await axios.post('http://10.0.2.2:3000/api/v1/authentication/login', data);
+            const response = await axios.post('https://back-end-j1bi.onrender.com/api/v1/authentication/login', data);
             if (response.data.token) {
+                const decoded = jwtDecode(response.data.token);
+
+                if (decoded.role._id !== "66771774961cf332096ffcb9") {
+                    throw new Error("unauthroized user")
+                }
+
                 await SecureStore.setItemAsync('token', response.data.token);
                 setIsAuthenticated(true);
+                await handleGetDeliveryManData();
+                reset();
                 navigation.navigate('Main');
             } else {
-                Alert.alert('Error', 'Invalid credentials');
+                console.log('Error', 'Invalid credentials');
             }
-
-            const token = await SecureStore.getItemAsync('token');
-            console.log(token);
         } catch (error) {
             console.log('Error', error);
         }
@@ -34,7 +64,6 @@ const AuthScreen = ({ navigation }) => {
             <Text style={styles.title}>Log In</Text>
 
             <View style={styles.inputContainer}>
-                <Text>Email</Text>
                 <Controller
                     control={control}
                     rules={{
@@ -56,7 +85,6 @@ const AuthScreen = ({ navigation }) => {
             </View>
 
             <View style={styles.inputContainer}>
-                <Text>Password</Text>
                 <Controller
                     control={control}
                     rules={{ required: true, minLength: 6 }}

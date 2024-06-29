@@ -1,11 +1,58 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { MaterialIcons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useEffect, useState } from 'react';
 
-const NotificationScreen = () => {
-    const navigation = useNavigation();
+import { MaterialIcons } from '@expo/vector-icons';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList } from 'react-native-gesture-handler';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import axios from 'axios';
+import * as SecureStore from 'expo-secure-store';
+import { useAuth } from '../../App';
+import socket from '../socket';
+
+const NotificationScreen = ({ route, navigation }) => {
+    const [notfication, setNotification] = useState([]);
+    const { handleGetAllOrders } = useAuth();
+
+    const handleGetNotification = async () => {
+        try {
+            const token = await SecureStore.getItemAsync('token');
+
+            const response = await axios.get('https://back-end-j1bi.onrender.com/api/v1/notification/delivery', {
+                headers: {
+                    'jwt': token
+                }
+            });
+
+            setNotification(response.data);
+        } catch (e) {
+            console.log(e);
+        }
+    }
+
+    useEffect(() => {
+        handleGetNotification();
+    }, []);
+
+    const handleOnAccept = async (orderId) => {
+        try {
+            const token = await SecureStore.getItemAsync('token');
+            const url = 'https://back-end-j1bi.onrender.com/api/v1/delivery/' + orderId + '/accept';
+
+            await axios.patch(url, {}, {
+                headers: {
+                    'jwt': token
+                }
+            });
+
+            socket.emit("change-delivery", null);
+
+            setNotification([]);
+            handleGetAllOrders();
+            navigation.goBack();
+        } catch (e) {
+            console.log(e);
+        }
+    }
 
     return (
         <SafeAreaView style={styles.container}>
@@ -17,33 +64,22 @@ const NotificationScreen = () => {
                 <MaterialIcons name="notifications-none" size={24} color="black" />
             </View>
 
-            <View style={styles.notificationCard}>
-                <Image source={require('../../assets/alsaraya.png')} style={styles.image} />
-                <View style={styles.textContainer}>
-                    <Text style={styles.title}>New Order</Text>
-                    <Text style={styles.restaurantName}>Alsaraya</Text>
-                </View>
-                <TouchableOpacity style={styles.button}>
-                    <Text style={styles.buttonText}>Accept</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.button, styles.declineButton]}>
-                    <Text style={styles.buttonText}>Decline</Text>
-                </TouchableOpacity>
-            </View>
-
-            <View style={styles.notificationCard}>
-                <Image source={require('../../assets/alsaraya.png')} style={styles.image} />
-                <View style={styles.textContainer}>
-                    <Text style={styles.title}>New Order</Text>
-                    <Text style={styles.restaurantName}>Alsaraya</Text>
-                </View>
-                <TouchableOpacity style={styles.button}>
-                    <Text style={styles.buttonText}>Accept</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.button, styles.declineButton]}>
-                    <Text style={styles.buttonText}>Decline</Text>
-                </TouchableOpacity>
-            </View>
+            <FlatList
+                data={notfication}
+                renderItem={({ item }) =>
+                    <View style={styles.notificationCard}>
+                        <Image source={{ uri: item.notificationType.restaurantIcon }} style={styles.image} />
+                        <View style={styles.textContainer}>
+                            <Text style={styles.title}>New Order</Text>
+                            <Text style={styles.restaurantName}>{item.notificationType.name}</Text>
+                        </View>
+                        <TouchableOpacity style={styles.button} onPress={() => handleOnAccept(item.orderId)}>
+                            <Text style={styles.buttonText}>Accept</Text>
+                        </TouchableOpacity>
+                    </View>
+                }
+                keyExtractor={n => n._id}
+            />
         </SafeAreaView>
     );
 };
